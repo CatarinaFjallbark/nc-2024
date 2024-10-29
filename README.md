@@ -1,5 +1,7 @@
 # nc-2024
 
+[Link to app](https://nc-2024-614d0.web.app/)
+
 ## Background
 
 ### Frontend
