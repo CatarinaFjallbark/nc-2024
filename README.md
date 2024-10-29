@@ -8,4 +8,5 @@
 The fronten is created with `npm create vite@latest`
 
 ## Further development
-* Github actions can be used to deploy the frontend and backend
+* Github actions can be used to deploy the backend
+* Use generated id instead of phone number as primary key in order to not expose the phone number too much
