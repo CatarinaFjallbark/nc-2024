@@ -1,1 +1,2 @@
-export const swedishPhoneNumber = /^\d{8,10}$/;
+export const nameRegex = /^.+$/;
+export const emailRegex = /^\S+@\S+\.\S+$/;

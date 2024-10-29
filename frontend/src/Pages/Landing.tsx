@@ -11,7 +11,6 @@ const Landing = () => {
       <Box sx={{ display: "flex", flexDirection: "column", margin: "1rem" }}>
         <TextField
           sx={{ margin: "1rem" }}
-          id="outlined-error-helper-text"
           label="phone number"
           variant="outlined"
           value={phoneNumber}
