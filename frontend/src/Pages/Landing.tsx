@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TextField, Button, Box } from "@mui/material";
 import {
   Auth,
@@ -23,18 +23,26 @@ const Landing = ({ firebaseAuth }: { firebaseAuth: Auth }) => {
   const onSignInSubmit = () => {
     console.log("onSignInSubmit");
   };
-  
 
-  window.recaptchaVerifier = new RecaptchaVerifier(
-    firebaseAuth,
-    "sign-in-button",
-    {
-      size: "invisible",
-      callback: () => {
-        onSignInSubmit()
-      }
-    },
-  );
+  useEffect(() => {
+    window.recaptchaVerifier = new RecaptchaVerifier(
+      firebaseAuth,
+      "sign-in-button",
+      {
+        size: "invisible",
+        callback: () => {
+          console.log("recaptcha done");
+          onSignInSubmit();
+        },
+      },
+    );
+  });
+
+  useEffect(() => {
+    if (!code) {
+      setErrorCode(false);
+    }
+  }, [code]);
 
   return (
     <Box>
@@ -42,7 +50,7 @@ const Landing = ({ firebaseAuth }: { firebaseAuth: Auth }) => {
       <Box sx={{ display: "flex", flexDirection: "column", margin: "1rem" }}>
         <TextField
           sx={{ margin: "1rem" }}
-          label="phone number"
+          label="phone number with language code, eg +46"
           variant="outlined"
           value={phoneNumber}
           error={erroPhone}
@@ -54,6 +62,7 @@ const Landing = ({ firebaseAuth }: { firebaseAuth: Auth }) => {
           onChange={(e) => {
             setErrorPhone(false);
             setPhoneNumber(e.target.value);
+            setCode("");
           }}
         />
         {code && (
@@ -61,7 +70,7 @@ const Landing = ({ firebaseAuth }: { firebaseAuth: Auth }) => {
             sx={{ margin: "1rem" }}
             label="texted code"
             variant="outlined"
-            value={phoneNumber}
+            value={code}
             error={errorCode}
             helperText={
               errorCode
@@ -78,30 +87,32 @@ const Landing = ({ firebaseAuth }: { firebaseAuth: Auth }) => {
           id="sign-in-button"
           variant="contained"
           onClick={() => {
-            // Use Firebase auth
             console.log("sign in", phoneNumber);
             if (code) {
               console.log("code");
-              window.confirmationResult.confirm(code).catch((error) => {
-                // Error; code
-                console.error(error);
-                setErrorCode(true);
-              });
+              window.confirmationResult
+                .confirm(code)
+                .then(() => {
+                  console.log("confirmed code");
+                })
+                .catch((error) => {
+                  console.log("confirmed code failed", error);
+                  setErrorCode(true);
+                });
             } else {
+              console.log("phone number");
               signInWithPhoneNumber(
                 firebaseAuth,
                 phoneNumber,
                 window.recaptchaVerifier,
               )
                 .then((confirmationResult) => {
-                  // SMS sent. Prompt user to type the code from the message, then sign the
-                  // user in with confirmationResult.confirm(code).
                   window.confirmationResult = confirmationResult;
-                  // ...
+                  console.log("phone number confirmed");
                 })
                 .catch((error) => {
                   // Error; SMS not sent
-                  console.error(error);
+                  console.log("number error", error);
                   setErrorPhone(true);
                 });
             }
