@@ -1,9 +1,40 @@
 import { useState } from "react";
 import { TextField, Button, Box } from "@mui/material";
+import {
+  Auth,
+  RecaptchaVerifier,
+  signInWithPhoneNumber,
+  ConfirmationResult,
+} from "firebase/auth";
 
-const Landing = () => {
+declare global {
+  interface Window {
+    recaptchaVerifier: RecaptchaVerifier;
+    confirmationResult: ConfirmationResult;
+  }
+}
+
+const Landing = ({ firebaseAuth }: { firebaseAuth: Auth }) => {
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [error, setError] = useState(false);
+  const [code, setCode] = useState("");
+  const [erroPhone, setErrorPhone] = useState(false);
+  const [errorCode, setErrorCode] = useState(false);
+
+  const onSignInSubmit = () => {
+    console.log("onSignInSubmit");
+  };
+  
+
+  window.recaptchaVerifier = new RecaptchaVerifier(
+    firebaseAuth,
+    "sign-in-button",
+    {
+      size: "invisible",
+      callback: () => {
+        onSignInSubmit()
+      }
+    },
+  );
 
   return (
     <Box>
@@ -14,25 +45,69 @@ const Landing = () => {
           label="phone number"
           variant="outlined"
           value={phoneNumber}
-          error={error}
+          error={erroPhone}
           helperText={
-            error
+            erroPhone
               ? "Unfortuantly there was an error signing you in, please try again"
               : ""
           }
           onChange={(e) => {
+            setErrorPhone(false);
             setPhoneNumber(e.target.value);
           }}
         />
+        {code && (
+          <TextField
+            sx={{ margin: "1rem" }}
+            label="texted code"
+            variant="outlined"
+            value={phoneNumber}
+            error={errorCode}
+            helperText={
+              errorCode
+                ? "Unfortuantly there was an error signing you in, please try again"
+                : ""
+            }
+            onChange={(e) => {
+              setErrorCode(false);
+              setCode(e.target.value);
+            }}
+          />
+        )}
         <Button
+          id="sign-in-button"
           variant="contained"
           onClick={() => {
             // Use Firebase auth
             console.log("sign in", phoneNumber);
-            setError(false);
+            if (code) {
+              console.log("code");
+              window.confirmationResult.confirm(code).catch((error) => {
+                // Error; code
+                console.error(error);
+                setErrorCode(true);
+              });
+            } else {
+              signInWithPhoneNumber(
+                firebaseAuth,
+                phoneNumber,
+                window.recaptchaVerifier,
+              )
+                .then((confirmationResult) => {
+                  // SMS sent. Prompt user to type the code from the message, then sign the
+                  // user in with confirmationResult.confirm(code).
+                  window.confirmationResult = confirmationResult;
+                  // ...
+                })
+                .catch((error) => {
+                  // Error; SMS not sent
+                  console.error(error);
+                  setErrorPhone(true);
+                });
+            }
           }}
         >
-          Sign in
+          {code ? "Send code" : "Sign in"}
         </Button>
       </Box>
     </Box>

@@ -6,15 +6,11 @@ import {
   createBrowserRouter,
   RouterProvider,
 } from "react-router-dom";
-
-// Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
 import Profile from "./Pages/Profile.tsx";
 import Landing from "./Pages/Landing";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
 
-// Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyCZK_PZj41KDDdfqVlwUy81CXacsQJlB7M",
   authDomain: "nc-2024-614d0.firebaseapp.com",
@@ -25,7 +21,11 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-initializeApp(firebaseConfig);
+const firebaseApp = initializeApp(firebaseConfig);
+
+// Initialize Firebase Authentication and get a reference to the service
+const auth = getAuth(firebaseApp);
+auth.useDeviceLanguage();
 
 const router = createBrowserRouter([
   {
@@ -34,7 +34,7 @@ const router = createBrowserRouter([
     children: [
       {
         path: "/",
-        element: <Landing />,
+        element: <Landing firebaseAuth={auth} />,
       },
       {
         path: "/:phonenumber",

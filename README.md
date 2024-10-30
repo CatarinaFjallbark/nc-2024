@@ -4,6 +4,8 @@
 
 ## Background
 
+This add is developed with Node v22.11.0
+
 ### Frontend
 The fronten is created with `npm create vite@latest`
 
