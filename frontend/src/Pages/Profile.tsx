@@ -41,7 +41,7 @@ const Profile = () => {
       <Box sx={{ display: "flex", flexDirection: "column", margin: "1rem" }}>
         <TextField
           sx={{ margin: "1rem" }}
-          label="sur and last name"
+          label="first and last name"
           variant="outlined"
           value={name}
           error={error || nameError}
