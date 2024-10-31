@@ -17,5 +17,5 @@ const firebaseApp = initializeApp(firebaseConfig);
 export const auth = getAuth(firebaseApp);
 auth.useDeviceLanguage();
 export { RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth';
-export type { Auth, ConfirmationResult } from 'firebase/auth';
+export type { ConfirmationResult } from 'firebase/auth';
 

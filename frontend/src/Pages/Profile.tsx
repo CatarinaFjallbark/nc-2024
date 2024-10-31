@@ -14,6 +14,7 @@ const Profile = () => {
   const { phonenumber } = useParams();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<ProfileError>({
     email: false,
     name: false,
@@ -24,8 +25,7 @@ const Profile = () => {
 
   const validate = (value: string, regex: RegExp, key: keyof ProfileError) => {
     if (!regex.test(value)) {
-      const updatedError = { ...error, [key]: true };
-      setError(updatedError);
+      setError({ ...error, [key]: true });
     }
   };
 
@@ -37,6 +37,7 @@ const Profile = () => {
         //const uid = user.uid;
         // ...
         console.log("Signed in");
+        setLoaded(true);
       } else {
         // User is signed out
         navigate("/");
@@ -46,63 +47,71 @@ const Profile = () => {
   });
 
   return (
-    <>
-      <Button
-        variant="contained"
-        onClick={() => {
-          // Use Firebase function
-          console.log("Sign out", name, email, phonenumber);
-        }}
-      >
-        Sign out
-      </Button>
-      <h1>Profile page</h1>
-      <div>{phonenumber}</div>
-      <Box sx={{ display: "flex", flexDirection: "column", margin: "1rem" }}>
-        <TextField
-          sx={{ margin: "1rem" }}
-          label="first and last name"
-          variant="outlined"
-          value={name}
-          error={activateError && (error.general || error.name)}
-          helperText={error.name ? "Name field cannot be empty" : ""}
-          onChange={(e) => {
-            setError({ ...error, name: false });
-            setName(e.target.value);
-            validate(e.target.value, nameRegex, "name");
-          }}
-        />
-        <TextField
-          sx={{ margin: "1rem" }}
-          label="email address"
-          variant="outlined"
-          value={email}
-          error={activateError && (error.general || error.email)}
-          helperText={error.email ? "Incorrect email address" : ""}
-          onChange={(e) => {
-            setError({ ...error, email: false });
-            setEmail(e.target.value);
-            validate(e.target.value, emailRegex, "email");
-          }}
-        />
+    loaded && (
+      <>
         <Button
           variant="contained"
           onClick={() => {
             // Use Firebase function
-            validate(name, nameRegex, "name");
-            validate(email, emailRegex, "email");
-            console.log("Save", name, email);
-            // This state exist to make sure that errors only occure after pressing the save button
-            setActivateError(true);
+            console.log("Sign out", name, email, phonenumber);
+            auth.signOut();
           }}
         >
-          Save
+          Sign out
         </Button>
-        {error.general && (
-          <div>"Unfortuantly there was an error saving, please try again</div>
-        )}
-      </Box>
-    </>
+        <h1>Profile page</h1>
+        <div>{phonenumber}</div>
+        <Box sx={{ display: "flex", flexDirection: "column", margin: "1rem" }}>
+          <TextField
+            sx={{ margin: "1rem" }}
+            label="first and last name"
+            variant="outlined"
+            value={name}
+            error={activateError && (error.general || error.name)}
+            helperText={error.name ? "Name field cannot be empty" : ""}
+            onChange={(e) => {
+              setError({ ...error, name: false, general: false });
+              setName(e.target.value);
+              validate(e.target.value, nameRegex, "name");
+            }}
+          />
+          <TextField
+            sx={{ margin: "1rem" }}
+            label="email address"
+            variant="outlined"
+            value={email}
+            error={activateError && (error.general || error.email)}
+            helperText={error.email ? "Incorrect email address" : ""}
+            onChange={(e) => {
+              setError({ ...error, email: false, general: false });
+              setEmail(e.target.value);
+              validate(e.target.value, emailRegex, "email");
+            }}
+          />
+          <Button
+            variant="contained"
+            onClick={() => {
+              // Use Firebase function
+              validate(name, nameRegex, "name");
+              validate(email, emailRegex, "email");
+              console.log("Save", name, email);
+              // This state exist to make sure that errors only occure after pressing the save button
+              setActivateError(true);
+              if (Object.values(error).includes(false)) {
+                setError({ ...error, general: true });
+              } else {
+                console.log("set data with api");
+              }
+            }}
+          >
+            Save
+          </Button>
+          {error.general && (
+            <div>"Unfortuantly there was an error saving, please try again</div>
+          )}
+        </Box>
+      </>
+    )
   );
 };
 
