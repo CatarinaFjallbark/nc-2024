@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { TextField, Button, Box } from "@mui/material";
+import { Button, Box } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import {
   auth,
@@ -7,6 +7,7 @@ import {
   RecaptchaVerifier,
   signInWithPhoneNumber,
 } from "../../firebase.ts";
+import { TextField } from "../Components/TextField/TextField.tsx";
 
 declare global {
   interface Window {
@@ -15,53 +16,54 @@ declare global {
   }
 }
 
+type LandingError = {
+  phone: boolean;
+  code: boolean;
+};
+
 const Landing = () => {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [code, setCode] = useState("");
   const [showCodeInput, setShowCodeInput] = useState(false);
-  const [errorPhone, setErrorPhone] = useState(false);
-  const [errorCode, setErrorCode] = useState(false);
+  const [error, setError] = useState<LandingError>({
+    phone: false,
+    code: false,
+  });
   const navigate = useNavigate();
-
-  const onSignInSubmit = () => {
-    console.log("onSignInSubmit");
-  };
 
   useEffect(() => {
     window.recaptchaVerifier = new RecaptchaVerifier(auth, "sign-in-button", {
       size: "invisible",
       callback: () => {
         console.log("recaptcha done");
-        onSignInSubmit();
       },
     });
-  }, [errorPhone, errorCode, auth]);
+  }, [error.phone, error.code]);
 
   // Reset code error if code is emptied
   useEffect(() => {
     if (!code) {
-      setErrorCode(false);
+      setError({ ...error, code: false });
     }
-  }, [code]);
+  }, [error, code]);
 
   return (
-    <Box>
+    <>
       <h1>NC 2024</h1>
-      <Box sx={{ display: "flex", flexDirection: "column", margin: "1rem" }}>
+      <Box sx={{ display: "flex", flexDirection: "column" }}>
         <TextField
-          sx={{ margin: "1rem" }}
           label="phone number with language code, eg +46"
           variant="outlined"
           value={phoneNumber}
-          error={errorPhone}
+          error={error.phone}
           helperText={
-            errorPhone
+            error.phone
               ? "Unfortuantly there was an error signing you in, please try again"
               : ""
           }
           onChange={(e) => {
             // Resets error when phone number is changed
-            setErrorPhone(false);
+            setError({ ...error, phone: false });
             setShowCodeInput(false);
             setCode("");
             setPhoneNumber(e.target.value);
@@ -69,18 +71,17 @@ const Landing = () => {
         />
         {showCodeInput && (
           <TextField
-            sx={{ margin: "1rem" }}
             label="texted code"
             variant="outlined"
             value={code}
-            error={errorCode}
+            error={error.code}
             helperText={
-              errorCode
+              error.code
                 ? "Unfortuantly there was an error signing you in, please try again"
                 : ""
             }
             onChange={(e) => {
-              setErrorCode(false);
+              setError({ ...error, code: false });
               setCode(e.target.value);
             }}
           />
@@ -101,7 +102,7 @@ const Landing = () => {
                 })
                 .catch((error) => {
                   console.log("confirmed code failed", error);
-                  setErrorCode(true);
+                  setError({ ...error, code: true });
                 });
             } else {
               console.log("phone number");
@@ -114,7 +115,7 @@ const Landing = () => {
                 .catch((error) => {
                   // Error; SMS not sent
                   console.log("number error", error);
-                  setErrorPhone(true);
+                  setError({ ...error, phone: true });
                 });
             }
           }}
@@ -122,7 +123,7 @@ const Landing = () => {
           {showCodeInput ? "Send code" : "Sign in"}
         </Button>
       </Box>
-    </Box>
+    </>
   );
 };
 

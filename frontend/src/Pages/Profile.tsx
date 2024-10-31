@@ -1,14 +1,24 @@
 import { useNavigate, useParams } from "react-router-dom";
-import { TextField, Button, Box } from "@mui/material";
+import { Button, Box } from "@mui/material";
 import { useEffect, useState } from "react";
 import { emailRegex, nameRegex } from "../Helpers/Regex";
-import { auth } from "../../firebase.ts";
+import { setData, auth, getData } from "../../firebase.ts";
+import { TextField } from "../Components/TextField/TextField.tsx";
 
 type ProfileError = {
   email: boolean;
   name: boolean;
   general: boolean;
 };
+
+type ProfileData = { data: { name: string; email: string } };
+
+enum SaveResult {
+  UNKNOWN = "unknown",
+  PENDING = "pending",
+  SUCCESS = "success",
+  FAIL = "fail",
+}
 
 const Profile = () => {
   const { phonenumber } = useParams();
@@ -20,23 +30,33 @@ const Profile = () => {
     name: false,
     general: false,
   });
-  const [activateError, setActivateError] = useState(false);
+  const [saveResult, setSaveResult] = useState<SaveResult>(SaveResult.UNKNOWN);
   const navigate = useNavigate();
 
   const validate = (value: string, regex: RegExp, key: keyof ProfileError) => {
-    if (!regex.test(value)) {
+    // Only set error after user has tried to save
+    if (saveResult !== SaveResult.UNKNOWN && !regex.test(value)) {
+      console.log("sets error for", value, key);
       setError({ ...error, [key]: true });
     }
   };
 
   useEffect(() => {
-    auth.onAuthStateChanged((user) => {
+    auth.onAuthStateChanged(async (user) => {
       if (user) {
-        // User is signed in, see docs for a list of available properties
-        // https://firebase.google.com/docs/reference/js/auth.user
-        //const uid = user.uid;
-        // ...
         console.log("Signed in");
+        if (!loaded) {
+          try {
+            const { data } = (await getData(phonenumber)) as ProfileData;
+            if (data) {
+              setName(data.name);
+              setEmail(data.email);
+              console.log("Get data", data);
+            }
+          } catch {
+            console.log("New user, no previous successful logins");
+          }
+        }
         setLoaded(true);
       } else {
         // User is signed out
@@ -50,6 +70,7 @@ const Profile = () => {
     loaded && (
       <>
         <Button
+          sx={{ display: "flex" }}
           variant="contained"
           onClick={() => {
             // Use Firebase function
@@ -63,26 +84,31 @@ const Profile = () => {
         <div>{phonenumber}</div>
         <Box sx={{ display: "flex", flexDirection: "column", margin: "1rem" }}>
           <TextField
-            sx={{ margin: "1rem" }}
             label="first and last name"
             variant="outlined"
             value={name}
-            error={activateError && (error.general || error.name)}
+            error={
+              saveResult !== SaveResult.UNKNOWN && (error.general || error.name)
+            }
             helperText={error.name ? "Name field cannot be empty" : ""}
             onChange={(e) => {
+              setSaveResult(SaveResult.UNKNOWN);
               setError({ ...error, name: false, general: false });
               setName(e.target.value);
               validate(e.target.value, nameRegex, "name");
             }}
           />
           <TextField
-            sx={{ margin: "1rem" }}
             label="email address"
             variant="outlined"
             value={email}
-            error={activateError && (error.general || error.email)}
+            error={
+              saveResult !== SaveResult.UNKNOWN &&
+              (error.general || error.email)
+            }
             helperText={error.email ? "Incorrect email address" : ""}
             onChange={(e) => {
+              setSaveResult(SaveResult.UNKNOWN);
               setError({ ...error, email: false, general: false });
               setEmail(e.target.value);
               validate(e.target.value, emailRegex, "email");
@@ -96,18 +122,47 @@ const Profile = () => {
               validate(email, emailRegex, "email");
               console.log("Save", name, email);
               // This state exist to make sure that errors only occure after pressing the save button
-              setActivateError(true);
-              if (Object.values(error).includes(false)) {
+              setSaveResult(SaveResult.PENDING);
+              if (Object.values(error).includes(true)) {
+                console.log("errors found on save");
                 setError({ ...error, general: true });
               } else {
-                console.log("set data with api");
+                console.log("set data with api", {
+                  phonenumber,
+                  name,
+                  email,
+                });
+                setData({
+                  phonenumber,
+                  data: {
+                    name,
+                    email,
+                  },
+                })
+                  .then((result) => {
+                    // Read result of the Cloud Function.
+                    /** @type {any} */
+                    console.log("result from api", result);
+                    setSaveResult(SaveResult.SUCCESS);
+                  })
+                  .catch((error) => {
+                    console.log("failed to save", error);
+                    setSaveResult(SaveResult.FAIL);
+                  });
               }
             }}
           >
             Save
           </Button>
           {error.general && (
-            <div>"Unfortuantly there was an error saving, please try again</div>
+            <div>Unfortuantly there was an error saving, please try again</div>
+          )}
+          {saveResult === SaveResult.FAIL ? (
+            <div>There was an error saving you details</div>
+          ) : (
+            saveResult === SaveResult.SUCCESS && (
+              <div>Your details are saved</div>
+            )
           )}
         </Box>
       </>

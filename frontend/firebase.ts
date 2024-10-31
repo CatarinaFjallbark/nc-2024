@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
+import { getFunctions, httpsCallable } from "firebase/functions";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCZK_PZj41KDDdfqVlwUy81CXacsQJlB7M",
@@ -19,3 +20,5 @@ auth.useDeviceLanguage();
 export { RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth';
 export type { ConfirmationResult } from 'firebase/auth';
 
+export const getData = httpsCallable(getFunctions(), 'getData');
+export const setData = httpsCallable(getFunctions(), 'setData');
