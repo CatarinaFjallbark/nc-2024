@@ -2,7 +2,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { TextField, Button, Box } from "@mui/material";
 import { useEffect, useState } from "react";
 import { emailRegex, nameRegex } from "../Helpers/Regex";
-import { auth } from "../../firebase.ts";
+import { setData, auth } from "../../firebase.ts";
 
 type ProfileError = {
   email: boolean;
@@ -24,7 +24,8 @@ const Profile = () => {
   const navigate = useNavigate();
 
   const validate = (value: string, regex: RegExp, key: keyof ProfileError) => {
-    if (!regex.test(value)) {
+    if (activateError && !regex.test(value)) {
+      console.log("sets error for", value, key);
       setError({ ...error, [key]: true });
     }
   };
@@ -97,10 +98,24 @@ const Profile = () => {
               console.log("Save", name, email);
               // This state exist to make sure that errors only occure after pressing the save button
               setActivateError(true);
-              if (Object.values(error).includes(false)) {
+              if (Object.values(error).includes(true)) {
+                console.log("errors found on save");
                 setError({ ...error, general: true });
               } else {
-                console.log("set data with api");
+                console.log("set data with api", {
+                  phonenumber,
+                  name,
+                  email,
+                });
+                setData({
+                  phonenumber,
+                  name,
+                  email,
+                }).then((result) => {
+                  // Read result of the Cloud Function.
+                  /** @type {any} */
+                  console.log("result from api", result);
+                });
               }
             }}
           >
