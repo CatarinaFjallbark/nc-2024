@@ -1,28 +1,49 @@
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { TextField, Button, Box } from "@mui/material";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { emailRegex, nameRegex } from "../Helpers/Regex";
+import { auth } from "../../firebase.ts";
 
-//Not signed in needs to be handled
+type ProfileError = {
+  email: boolean;
+  name: boolean;
+  general: boolean;
+};
 
 const Profile = () => {
   const { phonenumber } = useParams();
   const [name, setName] = useState("");
-  const [nameError, setNameError] = useState(false);
   const [email, setEmail] = useState("");
-  const [emailError, setEmailError] = useState(false);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<ProfileError>({
+    email: false,
+    name: false,
+    general: false,
+  });
   const [activateError, setActivateError] = useState(false);
+  const navigate = useNavigate();
 
-  const validateName = (value: string) => {
-    //Only add error if user has tried to sign in to improve user experience
-    setNameError(activateError && !nameRegex.test(value));
+  const validate = (value: string, regex: RegExp, key: keyof ProfileError) => {
+    if (!regex.test(value)) {
+      const updatedError = { ...error, [key]: true };
+      setError(updatedError);
+    }
   };
 
-  const validateEmail = (value: string) => {
-    //Only add error if user has tried to sign in to improve user experience
-    setEmailError(activateError && !emailRegex.test(value));
-  };
+  useEffect(() => {
+    auth.onAuthStateChanged((user) => {
+      if (user) {
+        // User is signed in, see docs for a list of available properties
+        // https://firebase.google.com/docs/reference/js/auth.user
+        //const uid = user.uid;
+        // ...
+        console.log("Signed in");
+      } else {
+        // User is signed out
+        navigate("/");
+        console.log("Signed out");
+      }
+    });
+  });
 
   return (
     <>
@@ -31,7 +52,6 @@ const Profile = () => {
         onClick={() => {
           // Use Firebase function
           console.log("Sign out", name, email, phonenumber);
-          setError(false);
         }}
       >
         Sign out
@@ -44,12 +64,12 @@ const Profile = () => {
           label="first and last name"
           variant="outlined"
           value={name}
-          error={error || nameError}
-          helperText={nameError ? "Name field cannot be empty" : ""}
+          error={activateError && (error.general || error.name)}
+          helperText={error.name ? "Name field cannot be empty" : ""}
           onChange={(e) => {
+            setError({ ...error, name: false });
             setName(e.target.value);
-            validateName(e.target.value);
-            setError(false);
+            validate(e.target.value, nameRegex, "name");
           }}
         />
         <TextField
@@ -57,28 +77,28 @@ const Profile = () => {
           label="email address"
           variant="outlined"
           value={email}
-          error={error || emailError}
-          helperText={emailError ? "Incorrect email address" : ""}
+          error={activateError && (error.general || error.email)}
+          helperText={error.email ? "Incorrect email address" : ""}
           onChange={(e) => {
+            setError({ ...error, email: false });
             setEmail(e.target.value);
-            validateEmail(e.target.value);
-            setError(false);
+            validate(e.target.value, emailRegex, "email");
           }}
         />
         <Button
           variant="contained"
           onClick={() => {
             // Use Firebase function
-            //setError(false);
-            validateName(name);
-            validateEmail(email);
+            validate(name, nameRegex, "name");
+            validate(email, emailRegex, "email");
             console.log("Save", name, email);
+            // This state exist to make sure that errors only occure after pressing the save button
             setActivateError(true);
           }}
         >
           Save
         </Button>
-        {error && (
+        {error.general && (
           <div>"Unfortuantly there was an error saving, please try again</div>
         )}
       </Box>

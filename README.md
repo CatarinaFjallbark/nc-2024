@@ -18,3 +18,4 @@ The fronten is created with `npm create vite@latest`
 
 ### Frontend
 * Use internationalization framework
+* Put Firebase configuration apikey in for example Github Sectret and varibles
