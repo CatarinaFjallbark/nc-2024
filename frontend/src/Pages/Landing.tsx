@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { TextField, Button, Box } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 import {
-  Auth,
+  auth,
+  ConfirmationResult,
   RecaptchaVerifier,
   signInWithPhoneNumber,
-  ConfirmationResult,
-} from "firebase/auth";
-import { useNavigate } from "react-router-dom";
+} from "../../firebase.ts";
 
 declare global {
   interface Window {
@@ -15,7 +15,7 @@ declare global {
   }
 }
 
-const Landing = ({ firebaseAuth }: { firebaseAuth: Auth }) => {
+const Landing = () => {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [code, setCode] = useState("");
   const [showCodeInput, setShowCodeInput] = useState(false);
@@ -28,19 +28,16 @@ const Landing = ({ firebaseAuth }: { firebaseAuth: Auth }) => {
   };
 
   useEffect(() => {
-    window.recaptchaVerifier = new RecaptchaVerifier(
-      firebaseAuth,
-      "sign-in-button",
-      {
-        size: "invisible",
-        callback: () => {
-          console.log("recaptcha done");
-          onSignInSubmit();
-        },
+    window.recaptchaVerifier = new RecaptchaVerifier(auth, "sign-in-button", {
+      size: "invisible",
+      callback: () => {
+        console.log("recaptcha done");
+        onSignInSubmit();
       },
-    );
-  }, [errorPhone, errorCode, firebaseAuth]);
+    });
+  }, [errorPhone, errorCode, auth]);
 
+  // Reset code error if code is emptied
   useEffect(() => {
     if (!code) {
       setErrorCode(false);
@@ -63,10 +60,11 @@ const Landing = ({ firebaseAuth }: { firebaseAuth: Auth }) => {
               : ""
           }
           onChange={(e) => {
+            // Resets error when phone number is changed
             setErrorPhone(false);
-            setPhoneNumber(e.target.value);
             setShowCodeInput(false);
             setCode("");
+            setPhoneNumber(e.target.value);
           }}
         />
         {showCodeInput && (
@@ -107,11 +105,7 @@ const Landing = ({ firebaseAuth }: { firebaseAuth: Auth }) => {
                 });
             } else {
               console.log("phone number");
-              signInWithPhoneNumber(
-                firebaseAuth,
-                phoneNumber,
-                window.recaptchaVerifier,
-              )
+              signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier)
                 .then((confirmationResult) => {
                   window.confirmationResult = confirmationResult;
                   console.log("phone number confirmed");

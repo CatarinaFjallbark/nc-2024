@@ -8,7 +8,6 @@ import {
 } from "react-router-dom";
 import Landing from "./Pages/Landing.tsx";
 import Profile from "./Pages/Profile.tsx";
-import { auth } from "../firebase.ts"
 
 const router = createBrowserRouter([
   {
@@ -17,11 +16,11 @@ const router = createBrowserRouter([
     children: [
       {
         path: "/",
-        element: <Landing firebaseAuth={auth} />,
+        element: <Landing />,
       },
       {
         path: "/:phonenumber",
-        element: <Profile />,
+        element: <Profile  />,
       },
     ],
   },
