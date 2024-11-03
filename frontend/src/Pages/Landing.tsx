@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Button, Box } from "@mui/material";
+import { Box } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import {
   auth,
@@ -7,8 +7,10 @@ import {
   RecaptchaVerifier,
   signInWithPhoneNumber,
 } from "../../firebase.ts";
-import { TextField } from "../Components/TextField/TextField.tsx";
+import { MuiTextField } from "../Components/TextField/MuiTextField.tsx";
+import { MuiButton } from "../Components/Button/MuiButton.tsx";
 
+// In order to allow calling recaptchaVerifier and confirmationResult on window
 declare global {
   interface Window {
     recaptchaVerifier: RecaptchaVerifier;
@@ -16,79 +18,73 @@ declare global {
   }
 }
 
-type LandingError = {
-  phone: boolean;
-  code: boolean;
-};
-
 const Landing = () => {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [code, setCode] = useState("");
   const [showCodeInput, setShowCodeInput] = useState(false);
-  const [error, setError] = useState<LandingError>({
-    phone: false,
-    code: false,
-  });
+  const [errorPhone, setErrorPhone] = useState(false);
+  const [errorCode, setErrorCode] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    window.recaptchaVerifier = new RecaptchaVerifier(auth, "sign-in-button", {
-      size: "invisible",
-      callback: () => {
-        console.log("recaptcha done");
-      },
-    });
-  }, [error.phone, error.code]);
+    if (!window.recaptchaVerifier) {
+      window.recaptchaVerifier = new RecaptchaVerifier(auth, "sign-in-button", {
+        size: "invisible",
+        callback: () => {
+          console.log("recaptcha done");
+        },
+      });
+    }
+  }, [errorPhone, errorCode]);
 
   // Reset code error if code is emptied
   useEffect(() => {
     if (!code) {
-      setError({ ...error, code: false });
+      setErrorCode(false);
     }
-  }, [error, code]);
+  }, [code]);
 
   return (
     <>
       <h1>NC 2024</h1>
       <Box sx={{ display: "flex", flexDirection: "column" }}>
-        <TextField
+        <MuiTextField
           label="phone number with language code, eg +46"
           variant="outlined"
           value={phoneNumber}
-          error={error.phone}
+          error={errorPhone}
           helperText={
-            error.phone
+            errorPhone
               ? "Unfortuantly there was an error signing you in, please try again"
               : ""
           }
           onChange={(e) => {
             // Resets error when phone number is changed
-            setError({ ...error, phone: false });
+            setErrorPhone(false);
             setShowCodeInput(false);
             setCode("");
             setPhoneNumber(e.target.value);
           }}
         />
         {showCodeInput && (
-          <TextField
+          <MuiTextField
             label="texted code"
             variant="outlined"
             value={code}
-            error={error.code}
+            error={errorCode}
             helperText={
-              error.code
+              errorCode
                 ? "Unfortuantly there was an error signing you in, please try again"
                 : ""
             }
             onChange={(e) => {
-              setError({ ...error, code: false });
+              setErrorCode(false);
               setCode(e.target.value);
             }}
           />
         )}
-        <Button
+        <MuiButton
           id="sign-in-button"
-          variant="contained"
           onClick={() => {
             console.log("sign in", phoneNumber);
             if (code) {
@@ -102,26 +98,36 @@ const Landing = () => {
                 })
                 .catch((error) => {
                   console.log("confirmed code failed", error);
-                  setError({ ...error, code: true });
+                  setErrorCode(true);
                 });
             } else {
               console.log("phone number");
-              signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier)
-                .then((confirmationResult) => {
-                  window.confirmationResult = confirmationResult;
-                  console.log("phone number confirmed");
-                  setShowCodeInput(true);
-                })
-                .catch((error) => {
-                  // Error; SMS not sent
-                  console.log("number error", error);
-                  setError({ ...error, phone: true });
-                });
+              try {
+                signInWithPhoneNumber(
+                  auth,
+                  phoneNumber,
+                  window.recaptchaVerifier,
+                )
+                  .then((confirmationResult) => {
+                    window.confirmationResult = confirmationResult;
+                    console.log("phone number confirmed");
+                    setShowCodeInput(true);
+                  })
+                  .catch((error) => {
+                    // Error; SMS not sent
+                    console.log("number error", error);
+                    setErrorPhone(true);
+                  });
+              } catch (error) {
+                // Error; SMS not sent
+                console.log("Test", error);
+                setErrorPhone(true);
+              }
             }
           }}
         >
           {showCodeInput ? "Send code" : "Sign in"}
-        </Button>
+        </MuiButton>
       </Box>
     </>
   );

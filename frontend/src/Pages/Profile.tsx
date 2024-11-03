@@ -1,20 +1,15 @@
 import { useNavigate, useParams } from "react-router-dom";
-import { Button, Box } from "@mui/material";
+import { Box } from "@mui/material";
 import { useEffect, useState } from "react";
 import { emailRegex, nameRegex } from "../Helpers/Regex";
 import { setData, auth, getData } from "../../firebase.ts";
-import { TextField } from "../Components/TextField/TextField.tsx";
-
-type ProfileError = {
-  email: boolean;
-  name: boolean;
-  general: boolean;
-};
+import { MuiTextField } from "../Components/TextField/MuiTextField.tsx";
+import { MuiButton } from "../Components/Button/MuiButton.tsx";
 
 type ProfileData = { data: { name: string; email: string } };
 
 enum SaveResult {
-  UNKNOWN = "unknown",
+  INITIAL = "initial",
   PENDING = "pending",
   SUCCESS = "success",
   FAIL = "fail",
@@ -25,20 +20,23 @@ const Profile = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [loaded, setLoaded] = useState(false);
-  const [error, setError] = useState<ProfileError>({
-    email: false,
-    name: false,
-    general: false,
-  });
-  const [saveResult, setSaveResult] = useState<SaveResult>(SaveResult.UNKNOWN);
+  const [errorName, setErrorName] = useState(false);
+  const [errorEmail, setErrorEmail] = useState(false);
+  const [saveResult, setSaveResult] = useState<SaveResult>(SaveResult.INITIAL);
   const navigate = useNavigate();
 
-  const validate = (value: string, regex: RegExp, key: keyof ProfileError) => {
-    // Only set error after user has tried to save
-    if (saveResult !== SaveResult.UNKNOWN && !regex.test(value)) {
-      console.log("sets error for", value, key);
-      setError({ ...error, [key]: true });
-    }
+  const validate = (
+    toValidate: { value: string; regex: RegExp; errorType: "name" | "email" }[],
+  ) => {
+    toValidate.forEach(({ value, regex, errorType }) => {
+      if (!regex.test(value)) {
+        if (errorType === "name") {
+          setErrorName(true);
+        } else if (errorType === "email") {
+          setErrorEmail(true);
+        }
+      }
+    });
   };
 
   useEffect(() => {
@@ -69,9 +67,8 @@ const Profile = () => {
   return (
     loaded && (
       <>
-        <Button
+        <MuiButton
           sx={{ display: "flex" }}
-          variant="contained"
           onClick={() => {
             // Use Firebase function
             console.log("Sign out", name, email, phonenumber);
@@ -79,53 +76,63 @@ const Profile = () => {
           }}
         >
           Sign out
-        </Button>
+        </MuiButton>
         <h1>Profile page</h1>
-        <div>{phonenumber}</div>
+        <p>{phonenumber}</p>
         <Box sx={{ display: "flex", flexDirection: "column", margin: "1rem" }}>
-          <TextField
+          <MuiTextField
             label="first and last name"
             variant="outlined"
             value={name}
-            error={
-              saveResult !== SaveResult.UNKNOWN && (error.general || error.name)
+            error={errorName && saveResult !== SaveResult.INITIAL}
+            helperText={
+              errorName && saveResult !== SaveResult.INITIAL
+                ? "Name field cannot be empty"
+                : ""
             }
-            helperText={error.name ? "Name field cannot be empty" : ""}
             onChange={(e) => {
-              setSaveResult(SaveResult.UNKNOWN);
-              setError({ ...error, name: false, general: false });
+              setErrorName(false);
               setName(e.target.value);
-              validate(e.target.value, nameRegex, "name");
+              validate([
+                { value: e.target.value, regex: nameRegex, errorType: "name" },
+              ]);
             }}
           />
-          <TextField
+          <MuiTextField
+            autoFocus
             label="email address"
             variant="outlined"
             value={email}
-            error={
-              saveResult !== SaveResult.UNKNOWN &&
-              (error.general || error.email)
+            error={errorEmail && saveResult !== SaveResult.INITIAL}
+            helperText={
+              errorEmail && saveResult !== SaveResult.INITIAL
+                ? "Incorrect email address"
+                : ""
             }
-            helperText={error.email ? "Incorrect email address" : ""}
             onChange={(e) => {
-              setSaveResult(SaveResult.UNKNOWN);
-              setError({ ...error, email: false, general: false });
+              setErrorEmail(false);
               setEmail(e.target.value);
-              validate(e.target.value, emailRegex, "email");
+              validate([
+                {
+                  value: e.target.value,
+                  regex: emailRegex,
+                  errorType: "email",
+                },
+              ]);
             }}
           />
-          <Button
-            variant="contained"
+          <MuiButton
             onClick={() => {
-              // Use Firebase function
-              validate(name, nameRegex, "name");
-              validate(email, emailRegex, "email");
-              console.log("Save", name, email);
-              // This state exist to make sure that errors only occure after pressing the save button
               setSaveResult(SaveResult.PENDING);
-              if (Object.values(error).includes(true)) {
+              validate([
+                { value: name, regex: nameRegex, errorType: "name" },
+                { value: email, regex: emailRegex, errorType: "email" },
+              ]);
+              console.log("Save", name, email);
+              console.log("Error", errorName, errorEmail);
+              if (errorName || errorEmail) {
                 console.log("errors found on save");
-                setError({ ...error, general: true });
+                setSaveResult(SaveResult.FAIL);
               } else {
                 console.log("set data with api", {
                   phonenumber,
@@ -139,10 +146,7 @@ const Profile = () => {
                     email,
                   },
                 })
-                  .then((result) => {
-                    // Read result of the Cloud Function.
-                    /** @type {any} */
-                    console.log("result from api", result);
+                  .then(() => {
                     setSaveResult(SaveResult.SUCCESS);
                   })
                   .catch((error) => {
@@ -153,16 +157,11 @@ const Profile = () => {
             }}
           >
             Save
-          </Button>
-          {error.general && (
-            <div>Unfortuantly there was an error saving, please try again</div>
-          )}
+          </MuiButton>
           {saveResult === SaveResult.FAIL ? (
-            <div>There was an error saving you details</div>
+            <p>Unfortuantly there was an error saving, please try again</p>
           ) : (
-            saveResult === SaveResult.SUCCESS && (
-              <div>Your details are saved</div>
-            )
+            saveResult === SaveResult.SUCCESS && <p>Your details are saved</p>
           )}
         </Box>
       </>
